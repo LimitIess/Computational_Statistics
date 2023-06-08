@@ -1,0 +1,262 @@
+---
+title: "Lab6_CS"
+author: "Damian Ke & Kyriakos Papadopoulos"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assigment 1: Genetic algorithm
+
+## Question 1
+Define the function $\frac{x^2}{e^x} - 2e^\frac{-9sinx}{x^2 + x+1}$
+
+**Answer 1: **
+```{r}
+library(gridExtra)
+f <- function(x){
+  a <- (x ^  2) / exp(x)
+  b <- - 2 * exp(-(9 * sin(x))/ (x ^ 2 + x + 1))
+  res <- a + b
+  return(res)
+}
+```
+
+## Question 2
+Define the crossover(): for two scalars x and y it returns their "kid" as (x+y)/2.
+
+**Answer 1: **
+```{r}
+crossover <- function(x, y){
+  res <- (x + y) / 2
+  return(res)
+}
+```
+
+## Question 3
+Define the function mutate() that for a scalar x returns the result of the integer
+division x^2 mod 30.
+
+**Answer 3: **
+```{r}
+mutate <- function(x){
+  res <-  (x ^ 2 )%% 30
+  return(res)
+}
+```
+
+## Write a functions thata depepends on the parameters maxiter and mutprob and:
+
+**Answer 4: **
+
+```{r}
+genetic <- function(maxiter, mutprob){ 
+  
+  initial_population <- seq(0, 30, 5)
+  values <- f(initial_population)
+  plot.new()
+  plot(f(seq(0, 30, 1)), type="l")
+  max_value <- max(values)
+  
+  for(i in 1:maxiter){
+    
+    #Two indexes are randomly sampled from the current population, they are further
+    #used as parents(use sample())
+    parents <- sample(initial_population, 2)
+    #One index with the smallest objective function is selected from the current 
+    #population, the point is referred to as victim (use order())
+    victim <- order(f(initial_population))[1]
+    #Parents are used to produce a new kid by crossover. Mutate this kid with probability
+    # mutprob
+    kid <- crossover(parents[1], parents[2])
+    mutprob <- sample(0:1, 1, prob = c(1 - mutprob, mutprob))
+    if(mutprob == 1){
+      kid <- mutate(kid)
+    }
+    #The victim is replaced by the kid in the population and the vector Values is
+    #updated
+    initial_population[victim] <- kid
+    values <- f(initial_population)
+    #The current maximal value of the objective function is saved
+    max_value <- max(values)
+}
+  points(values, col="blue", pch=21, bg="blue")
+  points(max_value, col="red", 
+         pch=21, bg="red")
+}
+```
+
+## Question 5:
+
+**Answer 5 :**
+
+
+```{r}
+genetic(10, 0.1)
+```
+
+```{r}
+genetic(10, 0.5)
+```
+
+```{r}
+genetic(10, 0.9)
+```
+
+```{r}
+genetic(100, 0.1)
+```
+
+```{r}
+genetic(100, 0.5)
+```
+
+```{r}
+genetic(100, 0.9)
+```
+
+
+We can see that the algorithm finds the number only for nigh number of iterations
+(100) and high probability of immutation(0.5 and 0.9)
+
+# Question 2: EM algorithm
+
+## Question 2.1
+Make a time series plot describing dependence of Z and Y versus X. Does it seem that two
+processes are related to each other? What can you say about the variation of the response
+values with respect to X?
+
+```{r,echo=FALSE, warning=FALSE}
+library(ggplot2)
+df= read.csv("physical1.csv")
+#Question 1
+ggplot(data=df,aes(x=X))+
+  geom_line(aes(y=Z, color="Z"))+
+  geom_line(aes(y=Y, color="Y"))+
+  ylab("Physical processes")+
+  scale_color_manual(name="Definitions", values=c("Z"= "red","Y"="blue"))
+```
+
+**Answer**
+Both variables seem to follow a same overall pattern for example, higher peaks at the beginning then a 
+more of a decrease for higher X values. But the similar pattern can be mostly found when X is less than 3,
+as they both increase and decrease at around the same time. Although Z has some missing values.
+For comparison of the variation, for smaller X values there is a higher variation. The opposite could be found
+for higher X values as the variation seems to decrease.
+
+
+## Question 2.2
+**The goal is to derive an EM algorithm that estimates**$\lambda$.
+
+**Answer**
+Probability density function of exponential distribution is equal to
+$\lambda*e^{-\lambda*x}$
+
+Therefore,
+$f(Y_i) = \frac{X_i}{\lambda}*e^{-\frac{X_i*Y_i}{\lambda}}$
+$f(Z_i) = \frac{X_i}{2\lambda}*e^{-\frac{X_i*Z_i}{2\lambda}}$
+
+As we are focusing on $\lambda$ for both random variables the jointly probability distribution
+can be therefore used. It is important to mention that both random variables are not
+dependent on each other as it can be seen in the formula.
+
+Joint probability distribution: 
+$f(Y_i,Z_i) = \frac{X_i}{2\lambda}*e^{-\frac{X_i*Z_i}{2\lambda}}*\frac{X_i}{\lambda}*e^{-\frac{X_i*Y_i}{\lambda}}$
+= $$\frac{X_{i}^2}{2\lambda^2}*e^{-\frac{X_i*Z_i+2X_i*Y_i}{2\lambda}}$$
+
+Likelihood: $$L(f(Y_i,Z_i)) = (\frac{1}{2\lambda^2})^n* \prod_{i = 1}^{n}X_{i}^2*e^{-\frac{\sum_{i = 1}^{n}X_i*Z_i+2X_i*Y_i}{2\lambda}}$$
+
+Loglikelihood: $$Log (L(f(Y_i,Z_i))) = -nlog(2) - 2nlog(\lambda)+\sum_{i = 1}^{n}log(X_i^2)-\frac{\sum_{i = 1}^{n}X_i*Z_i+2X_i*Y_i}{2\lambda}$$
+
+## Step E
+To make this easier to work with 
+
+$-\frac{\sum_{i = 1}^{n}X_i*Z_i+2X_i*Y_i}{2\lambda}$
+is split up into $-\frac{\sum_{i = 1}^{n}X_i*Z_i}{2\lambda}-\frac{\sum_{i = 1}^{n}X_i*Y_i }{\lambda}$
+
+Because there are some missing values for $Z_i$ for part $-\frac{\sum_{i = 1}^{n}X_i*Z_i}{2\lambda}$
+will be split up into unobserved $-\frac{\sum_{i = r+1}^{n}X_i*Z_i}{2\lambda}$ and observed $-\frac{\sum_{i = 1}^{r}X_i*Z_i}{2\lambda}$.
+The unobserved observations have expected value as the random variable.
+The expected value of exponential distribution is $\frac{1}{\lambda}$
+
+Therefore, $-\frac{\sum_{i = r+1}^{n}X_i*Z_i}{2\lambda}$ = $-\frac{\sum_{i = r+1}^{n}X_i*\frac{2\lambda_k}{X_i}}{2\lambda}$ = $$-\frac{(n-r)\lambda_k}{\lambda} $$ 
+
+The final formula for **Step E** is:
+$$Q(\lambda, \lambda^t) = -nlog(2) - 2nlog(\lambda)+\sum_{i = 1}^{n}log(X_i^2)-\frac{\sum_{i = 1}^{r}X_i*Z_i}{2\lambda}-\frac{(n-r)\lambda_k}{\lambda}-\frac{\sum_{i = 1}^{n}X_i*Y_i }{\lambda}$$
+
+## M step
+The partial derivative is taken for $\frac{\partial Q(\lambda, \lambda^t)}{\partial \lambda} = 0$.
+$$\frac{-2n}{\lambda}+\frac{\sum_{i = 1}^{r}X_i*Z_i}{2\lambda^2}+\frac{(n-r)\lambda_k}{\lambda^2}+\frac{\sum_{i = 1}^{n}X_i*Y_i }{\lambda^2} = 0$$
+
+$$\lambda = \frac{\sum_{i = 1}^{r}X_i*Z_i+2(n-r)\lambda_k+2\sum_{i = 1}^{n}X_i*Y_i}{4n}$$
+
+## Question 2.3
+
+Implement this algorithm in R, use $\lambda_0$ = 100 and convergence criterion "stop if the change
+in $\lambda$ is less than 0:001". What is the optimal $\lambda$ and how many iterations were required to
+compute it?
+```{r}
+#Question 3
+EM<-function(x,y,z, kmax){
+  Zobs <- z[!is.na(z)]
+  Zmiss <- z[is.na(z)]
+  Xobs = x[!is.na(z)]
+  n <- length(c(Zobs, Zmiss))
+  r <- length(Zobs)
+  k<-1
+  
+  eps = 0.001
+  prev_lambda = 100
+  curr_lambda = (sum(Xobs*Zobs) + 2*(n-r)*prev_lambda + 2*sum(x*y))/(4*n) 
+  #For k=1, the current lambda will use the prev_lambda value, as usually
+  #this step is done in M-step.
+  while ((abs(prev_lambda-curr_lambda)>eps) && (k<(kmax+1))){
+    prev_lambda<-curr_lambda
+    
+    # The E-step is not needed for this case
+    # M-step
+    curr_lambda = (sum(Xobs*Zobs) + 2*(n-r)*curr_lambda + 2*sum(x*y))/(4*n)
+    k<-k+1
+  }
+  return(c(k,curr_lambda))
+}
+results = EM(df$X,df$Y,df$Z,100)
+```
+
+
+**Answer**
+Optimal $\lambda$ is `r results[2]` and required `r results[1]` iterations.
+
+
+## Question 2.4
+Plot E[Y] and E[Z] versus X in the same plot as Y and Z versus X. Comment whether
+the computed $\lambda$ seems to be reasonable.
+
+```{r, echo=FALSE}
+df$e_y = results[2]/df$X
+df$e_z = (2*results[2])/df$X
+#Question 4 
+p = ggplot(data=df, aes(x=X))+
+  geom_line(aes(y=e_y, color="E(Y)"))+
+  geom_line(aes(y=e_z, color="E(Z)"))+  
+  geom_line(aes(y=Z, color="Z"))+
+  geom_line(aes(y=Y, color="Y"))+
+  ylab("Physical processes")+
+  scale_color_manual(name="Definitions", values=c("E(Y)"="cyan", 
+                                                  "E(Z)"="black",
+                                                  "Z"= "red",
+                                                  "Y"="blue"))
+p
+```
+
+
+**Answer**
+The $\lambda$ seems to be reasonable as both variables follow their corresponding expected value.
+It can be seen that as X increases, both expected value and the corresponding variable decreases.
+
+# Appendix
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
